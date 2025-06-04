@@ -1,0 +1,51 @@
+---
+title: "project-joyce"
+output: pdf_document
+date: "2025-06-03"
+---
+# Data Description
+```{r}
+
+
+
+```
+
+
+
+# Basic Linear Model
+
+```{r}
+library(car)
+
+df <- read.csv("../insurance.csv")
+
+fit <- lm(charges~., data = df)
+summary(fit)
+
+```
+# Revised Linear Regression 
+```{r}
+df$log_charges <- log(df$charges)
+df$children_factor <- as.factor(df$children)
+df$age_sq <- df$age^2
+df$bmi_sq <- df$bmi^2
+fit <- lm(log_charges ~ age * smoker + age_sq +  sex + bmi * smoker 
+              + bmi_sq + children_factor + region, data = df)
+
+summary(fit)
+```
+
+# logistic regression 
+```{r}
+# binarize `log_charges`
+threshold_75 <- quantile(df$log_charges, 0.75)
+df$high_log_charge <- ifelse(df$log_charges > threshold_75, 1, 0)
+
+new_fit = glm(high_log_charge ~ age * smoker + age_sq + sex + bmi * smoker +
+               bmi_sq + children_factor + region, data = df, family = binomial(link = "logit"))
+summary(new_fit)
+
+```
+
+
+
