@@ -35,23 +35,70 @@ To better capture complex relationships, the model may be extended to include in
 
 Logistic regression is another model we consider. This model is used for classification, not regression, but this can be helpful for predicting categories like high-risk, high-cost customers.
 
-Another model we consider is a regression tree. This model also captures nonlinearity and interactions, is easy to visualize and explain, but is prone to overfitting without pruning and is less stable.
+Another model we consider is a regression tree. This model also captures nonlinearity and interactions, is easy to visualize and explain, but is prone to overfitting without pruning and is less stable. An extension of this is the random forest model, a supervised learning algorithm that builds many trees, where each tree sees a random sample or subset of data and features, and predictions are averaged across the trees.
 
-
-#### Linear relationships
-
-
-#### Multicollinearity
-
-
-
-## Diagnose
-
-model assumptions: mean zero, homoscedasticity, normality
+Pre-fitting Model Assumptions
 
 ```{r}
-head(df)
+library(ggplot2)
+library(car)        # For VIF
+library(psych)      # For descriptive stats
+library(dplyr)      # For data manipulation
+library(GGally)     # For pair plots
+library(olsrr)
 ```
+
+
+```{r}
+# Linearity
+
+ggpairs(df, columns = c("age", "bmi", "children", "charges"))
+
+# Scatterplots
+ggplot(df, aes(x = bmi, y = charges)) + geom_point() + geom_smooth(method = "lm")
+ggplot(df, aes(x = age, y = charges)) + geom_point() + geom_smooth(method = "lm")
+```
+
+```{r}
+# Homoscedasticity
+model <- lm(charges ~ age + bmi + children + sex + smoker + region, data = df)
+
+# Residuals vs fitted values plot
+plot(model$fitted.values, resid(model),
+     xlab = "Fitted values", ylab = "Residuals",
+     main = "Residuals vs Fitted")
+abline(h = 0, col = "red")
+```
+
+```{r}
+# Normality of Residuals
+hist(resid(model), main = "Histogram of Residuals", xlab = "Residuals")
+
+qqnorm(resid(model))
+qqline(resid(model), col = "red")
+```
+```{r}
+# Multicollinearity
+vif(model)
+```
+```{r}
+# Outliers/Skew in y
+ggplot(df, aes(x = charges)) +
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Medical Charges")
+
+# Boxplot to check for outliers
+ggplot(df, aes(y = charges)) + 
+  geom_boxplot(fill = "tomato") + 
+  labs(title = "Boxplot of Medical Charges")
+```
+```{r}
+# Balanced Categorical Variables
+table(df$sex)
+table(df$smoker)
+table(df$region)
+```
+
 
 Regression Tree Model
 
@@ -98,12 +145,14 @@ r_squared <- 1 - (ss_res / ss_tot)
 cat("Test RMSE:", rmse_val, "\n")
 cat("Test R-squared:", r_squared, "\n")
 
+rpart.plot(model, type = 2, extra = 101, fallen.leaves = TRUE)
+
 plot(test_data$charges, preds, main = "Actual vs Predicted",
      xlab = "Actual Charges", ylab = "Predicted Charges")
 abline(0, 1, col = "red")
 ```
 
-RandomForest model
+Random Forest model
 
 ```{r}
 rf_model <- randomForest(charges ~ ., data = train_data, ntree = 500)
@@ -121,7 +170,34 @@ plot(test_data$charges, preds, main = "Actual vs Predicted",
      xlab = "Actual Charges", ylab = "Predicted Charges")
 abline(0, 1, col = "red")
 ```
+```{r}
+importance(rf_model)
+```
+```{r}
+ImpData <- as.data.frame(importance(rf_model))
+ImpData$Var.Names <- row.names(ImpData)
 
+ggplot(ImpData, aes(x=Var.Names, y=`IncNodePurity`)) +
+  geom_segment( aes(x=Var.Names, xend=Var.Names, y=0, yend=`IncNodePurity`), color="skyblue") +
+  geom_point(aes(size = IncNodePurity), color="blue", alpha=0.6) +
+  theme_light() +
+  coord_flip() +
+  theme(
+    legend.position="bottom",
+    panel.grid.major.y = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+```
+
+```{r}
+rf_pred <- predict(rf_model, , newdata = df)
+rf_resid <- df$charges - rf_pred
+
+plot(rf_pred, rf_resid,
+     xlab = "Predicted", ylab = "Residuals", main = "Residuals vs Predicted (RF)")
+abline(h = 0, col = "red")
+```
 
 
 
