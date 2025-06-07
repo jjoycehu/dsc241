@@ -1,0 +1,127 @@
+---
+title: "project-joshua"
+output: html_notebook
+---
+
+```{r}
+# load packages
+library(car)
+library(rpart)
+library(caret)        
+library(Metrics)
+library(rpart.plot)
+library(randomForest)
+
+# load data
+df <- read.csv("../insurance.csv")
+head(df)
+```
+
+## Model Selection
+To model medical expenses as a function of customer attributes, we start with a basic multiple linear regression model:
+\begin{equation}
+    y_i = \beta_0 + \beta_1\cdot age_i + \beta_2\cdot sex_i+\beta_3\cdot BMI_i+ \beta_4\cdot children_i+\beta_5\cdot smoker_i+\beta_6\cdot region_i
+\end{equation}
+We fit this model on the data, minimizing teh residual sum of squares (RSS) and optimizing coefficient values:
+\begin{equation}
+    min_\beta\sum^n_{i=1}(y_i-x_i^T\beta)^2
+\end{equation}
+This model establishes the baseline performance and identifies major linear relationships. It is simple and easily interpretable but may underfit if nonlinearity or interactions exist. By minimizing prediction error, the goal is to accurately estimate medical expenses for future patients. This is important for accurate risk assessment and pricing for new customers that seek insurance coverage. By comparing the weights $(\beta_1, \dots, \beta_k)$, we can easily interpret the contributions each factor has on medical expenses. The model coefficients can represent the relationships between each patient characteristic and the patient's medical expenses. This inference analysis provides better understanding of which features drive medical expenses. 
+
+To better capture complex relationships, the model may be extended to include interaction terms (e.g. $smoker\times BMI$) and polynomial non-linear transformations (e.g. $age^2$). This may possibly improve model performance, especially if the assumption of linearity is violated. However, this is at the cost of increased model complexity and risk of overfitting. This can be given by the following regression model:
+\begin{equation}
+    y = \beta_0 + \sum^p_{j=1}\beta_jx_j+\sum_{j<k}\beta_{xj}x_jx_k
+\end{equation}
+
+Logistic regression is another model we consider. This model is used for classification, not regression, but this can be helpful for predicting categories like high-risk, high-cost customers.
+
+Another model we consider is a regression tree. This model also captures nonlinearity and interactions, is easy to visualize and explain, but is prone to overfitting without pruning and is less stable.
+
+
+#### Linear relationships
+
+
+#### Multicollinearity
+
+
+
+## Diagnose
+
+model assumptions: mean zero, homoscedasticity, normality
+
+```{r}
+head(df)
+```
+
+Regression Tree Model
+
+```{r}
+df$sex <- as.factor(df$sex)
+df$smoker <- as.factor(df$smoker)
+df$region <- as.factor(df$region)
+
+train_index <- createDataPartition(df$charges, p = 0.8, list = FALSE)
+train_data <- df[train_index, ]
+test_data <- df[-train_index, ]
+
+model <- rpart(charges ~ ., data = train_data, method = "anova")
+
+preds <- predict(model, newdata = test_data)
+
+rmse_val <- rmse(test_data$charges, preds)
+ss_res <- sum((test_data$charges - preds)^2)
+ss_tot <- sum((test_data$charges - mean(test_data$charges))^2)
+r_squared <- 1 - (ss_res / ss_tot)
+
+cat("Test RMSE:", rmse_val, "\n")
+cat("Test R-squared:", r_squared, "\n")
+
+rpart.plot(model, type = 2, extra = 101, fallen.leaves = TRUE)
+
+plot(test_data$charges, preds, main = "Actual vs Predicted",
+     xlab = "Actual Charges", ylab = "Predicted Charges")
+abline(0, 1, col = "red")
+```
+
+Deeper Regression Tree Model
+
+```{r}
+model <- rpart(charges ~ ., data = train_data, method = "anova", control = rpart.control(minsplit = 5, cp = 0.001, maxdepth = 10))
+
+preds <- predict(model, newdata = test_data)
+
+rmse_val <- rmse(test_data$charges, preds)
+ss_res <- sum((test_data$charges - preds)^2)
+ss_tot <- sum((test_data$charges - mean(test_data$charges))^2)
+r_squared <- 1 - (ss_res / ss_tot)
+
+cat("Test RMSE:", rmse_val, "\n")
+cat("Test R-squared:", r_squared, "\n")
+
+plot(test_data$charges, preds, main = "Actual vs Predicted",
+     xlab = "Actual Charges", ylab = "Predicted Charges")
+abline(0, 1, col = "red")
+```
+
+RandomForest model
+
+```{r}
+rf_model <- randomForest(charges ~ ., data = train_data, ntree = 500)
+preds <- predict(rf_model, newdata = test_data)
+
+rmse_val <- rmse(test_data$charges, preds)
+ss_res <- sum((test_data$charges - preds)^2)
+ss_tot <- sum((test_data$charges - mean(test_data$charges))^2)
+r_squared <- 1 - (ss_res / ss_tot)
+
+cat("Test RMSE:", rmse_val, "\n")
+cat("Test R-squared:", r_squared, "\n")
+ 
+plot(test_data$charges, preds, main = "Actual vs Predicted",
+     xlab = "Actual Charges", ylab = "Predicted Charges")
+abline(0, 1, col = "red")
+```
+
+
+
+
