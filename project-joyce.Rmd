@@ -3,16 +3,8 @@ title: "project-joyce"
 output: pdf_document
 date: "2025-06-03"
 ---
-# Data Description
-```{r}
 
-
-
-```
-
-
-
-# Basic Linear Model
+# Basic Linear Regression Model
 
 ```{r}
 library(car)
@@ -35,15 +27,31 @@ fit <- lm(log_charges ~ age * smoker + age_sq +  sex + bmi * smoker
 summary(fit)
 ```
 
-# logistic regression 
 ```{r}
-# binarize `log_charges`
-threshold_75 <- quantile(df$log_charges, 0.75)
-df$high_log_charge <- ifelse(df$log_charges > threshold_75, 1, 0)
+n <- nrow(df)
+step(fit, direction="forward", k=log(n)) $ call
+step(fit, direction="backward", k=log(n)) $ call
+step(fit, direction="both", k=log(n)) $ call
 
-new_fit = glm(high_log_charge ~ age * smoker + age_sq + sex + bmi * smoker +
-               bmi_sq + children_factor + region, data = df, family = binomial(link = "logit"))
-summary(new_fit)
+
+```
+# Diagnostics
+```{r}
+
+res <- residuals(fit)
+mean_res <- mean(res)
+print(mean_res)
+
+```
+```{r}
+
+residualPlots(fit)
+
+```
+```{r}
+
+qqnorm(res)
+qqline(res, col = "red", lwd = 2)
 
 ```
 
